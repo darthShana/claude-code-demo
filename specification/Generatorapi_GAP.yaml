@@ -1,0 +1,588 @@
+openapi: 3.0.1
+info:
+  title: Generator Insurance - GAP Quote Service API
+  description: 'Generator Guaranteed Asset Protection API for creating insurance policy '
+  version: 1.0.0
+servers:
+- url: /quickquote/generator/gap/v2
+security:
+- APIKeyHeader: []
+tags:
+- name: GAP Insurance
+  description: GAP quote resource
+paths:     
+
+  /quote/create:
+    post:
+      tags:
+      - gap-quote-resource
+      summary: Create gap quote
+      description: create a new gap quote
+      operationId: create
+      parameters:
+      - name: X-Agent-Code
+        in: header
+        description: Agent Code
+        required: true
+        schema:
+          type: string
+      - name: X-Brand-Code
+        in: header
+        description: Agent Brand eg. Autosure, Turners
+        required: true
+        schema:
+          type: string
+      - name: X-User-Code
+        in: header
+        description: User code to identify the user
+        required: true
+        schema:
+          type: string
+      requestBody:
+        description: quoteRequest
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GapQuoteRequestDTO'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GapQuoteResponseDTO'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: quoteRequest
+
+  /quote/bind:
+    post:
+      tags:
+      - gap-quote-resource
+      summary: Bind quote
+      description: Binds a quote
+      operationId: bind
+      parameters:
+      - name: X-Agent-Code
+        in: header
+        description: Agent Code
+        required: true
+        schema:
+          type: string
+      - name: X-Brand-Code
+        in: header
+        description: Agent Brand eg. Autosure, Turners
+        required: true
+        schema:
+          type: string
+      - name: X-User-Code
+        in: header
+        description: User code to identify the user
+        required: true
+        schema:
+          type: string
+      requestBody:
+        description: quoteRequest
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GapBindQuoteRequestDTO'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GapBindResponseDTO'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: quoteRequest
+components:
+  schemas:
+    VehicleDetails:
+      required:
+      - bodyColour
+      - bodyStyle
+      - ccRating
+      - fuelType
+      - make
+      - model
+      - odometerReading
+      - vin
+      - year
+      type: object
+      properties:
+        registration:
+          type: string
+          description: Vehicle registration number if present
+          example: YNJKLL
+        vin:
+          type: string
+          description: Vehicle identification number
+          example: 1FMDU73E85Z65576
+        make:
+          type: string
+          description: Vehicle make
+          example: Toyota
+        model:
+          type: string
+          description: Vehicle model
+          example: Camry
+        year:
+          type: string
+          description: Vehicle year
+          example: "2016"
+        ccRating:
+          type: string
+          description: Vehicle CC rating
+          example: "2494"
+        fuelType:
+          type: string
+          description: Vehicle fuel type
+          example: Petrol
+        odometerReading:
+          type: string
+          description: Vehicle odometer reading in km, this may not be up to date
+          example: "44476"
+        bodyColour:
+          type: string
+          description: Vehicle body colour
+          example: White
+        bodyStyle:
+          type: string
+          description: Vehicle body style
+          example: Hatchback
+        variants:
+          type: array
+          description: This is an optional field and will be returned only if this
+            model has variant.
+          items:
+            $ref: '#/components/schemas/Variant'
+        rateCharts:
+          type: array
+          description: List of rate cards available to the agent
+          items:
+            $ref: '#/components/schemas/RateChart'
+    RateChart:
+      required:
+      - code
+      - description
+      type: object
+      properties:
+        code:
+          type: string
+          description: Rate chart code
+          example: ST1
+        description:
+          type: string
+          description: Rate chart description
+          example: Standard Rate Card
+    Variant:
+      required:
+      - code
+      - description
+      type: object
+      properties:
+        code:
+          type: string
+          description: Vehicle variant code
+          example: TURBO
+        description:
+          type: string
+          description: Vehicle variant description
+          example: TURBO
+    GapQuoteRequestDTO:
+      type: object
+      properties:
+        regoOrVin:
+          type: string
+          description: Registration number of VIN
+          example: 1FMDU73E85Z65576
+        maxShortfall:
+          type: string
+          description: gap cover
+          example: GAP_5000
+          enum:
+          - GAP_5000
+          - GAP_10000
+          - GAP_15000
+          - GAP_20000
+          - GAP_30000
+          - GAP_40000
+    FinanceCompany:
+      required:
+      - code
+      - description
+      type: object
+      properties:
+        code:
+          type: string
+          description: Unique finance company code
+          example: AA Finance
+        description:
+          type: string
+          description: Finance company name
+          example: AA Finance
+    GapShortfall:
+      required:
+      - code
+      - description
+      type: object
+      properties:
+        code:
+          type: string
+          description: Maximum shortfall amount code
+          example: GAP_5000
+        description:
+          type: string
+          description: Maximum shortfall amount description
+          example: GAP_5000
+    VehicleInsurer:
+      required:
+      - code
+      - description
+      type: object
+      properties:
+        code:
+          type: string
+          description: Unique vehicle insurer code
+          example: AA
+        description:
+          type: string
+          description: Vehicle insurer name
+          example: AA
+    GapQuoteResponseDTO:
+      type: object
+      properties:
+        quoteResponse:
+          $ref: '#/components/schemas/GapQuoteResponse'
+        errors:
+          type: array
+          description: List of errors
+          items:
+            $ref: '#/components/schemas/ResponseError'
+    GapQuoteResponse:
+      required:
+      - quoteRef
+      - vehicleDetails
+      type: object
+      properties:
+        quoteRef:
+          type: string
+          description: Quote reference number
+          example: "132466554"
+        quoteExpiryDate:
+          type: string
+        gstRate:
+          type: string
+          description: GST used in calculation
+          example: "11.625"
+        vehicleDetails:
+          $ref: '#/components/schemas/VehicleDetails'
+        gapPremium:
+          $ref: '#/components/schemas/GapPremium'
+    GapPremium:
+      required:
+      - retailAmount
+      - wholesaleAmount
+      type: object
+      properties:
+        wholesaleAmount:
+          type: number
+          description: Wholesale amount including GST
+          example: 172.5
+        retailAmount:
+          type: number
+          description: Retail amount including GST
+          example: 610.65
+    GapBindQuoteRequestDTO:
+      required:
+      - agreeToDeclaration
+      - applicant
+      - financeDetails
+      - paymentMethod
+      - quoteRef
+      - vehicleInsurer
+      - vehicleValue
+      - vehicleDepositProvided
+      type: object
+      properties:
+        quoteRef:
+          type: string
+          description: Unique reference of the quote
+          example: "10002983"
+        regoOrVin:
+          type: string
+          description: Registration number of VIN
+          example: 1FMDU73E85Z65576
+        vehicleValue:
+          type: integer
+          description: Value of the vehicle
+          example: 15000
+        vehicleInsurer:
+          type: string
+          description: Vehicle insurer code
+          example: AA
+        financeDetails:
+          $ref: '#/components/schemas/Finance'
+        retailPremiumAdjustment:
+          type: number
+          description: If an adjustment is applied reducing your markup
+          example: 200.0
+        agreeToDeclaration:
+          type: boolean
+          description: User needs to agree to Disclosure, Privacy & Declaration
+          example: true
+        applicant:
+          $ref: '#/components/schemas/Applicant'
+        paymentMethod:
+          type: string
+          description: Type of payment method used
+          example: FINANCED | CASH_SALES_AGENT
+          enum:
+          - FINANCED
+          - CASH_SALES_AGENT
+        loanContractNumber:
+          type: string
+          description: loan contract number mandatory when payment type is financed.
+          example: LP234243
+        applicantsEmail:
+          type: string
+          description: List of comma seprated parties who should receive policy documents
+            in an email on successful binding.
+          example: abc@xyz.com, def@xyz.com
+        vehicleDepositProvided:
+          type: boolean
+          description: Are you providing a deposit for your vehicle?
+        continuePurchase:
+          type: boolean
+          description: Your deposit may reduce any shortfall. Do you still want to continue with purchasing this Guaranteed Asset Protection Insurance?
+    Finance:
+      required:
+      - amount
+      - balancePayable
+      - company
+      - contractLength
+      - startDate
+      type: object
+      properties:
+        company:
+          type: string
+          description: Finance company name
+          example: AA Finance
+        amount:
+          type: integer
+          description: Finance amount
+          example: 5000
+        balancePayable:
+          type: integer
+          description: Balance amount payable
+          example: 4000
+        startDate:
+          type: string
+          description: Finance start date
+          format: date
+          example: 2018-07-21
+        contractLength:
+          maximum: 84
+          minimum: 1
+          type: integer
+          description: Finance contract length in months
+          example: 5
+    Applicant:
+      required:
+      - applicantContact
+      - applicantPostalAddress
+      - businessApplicant
+      - dateOfBirth
+      - firstName
+      - jointApplicants
+      - surName
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: First name of the applicant
+          example: John
+        surName:
+          type: string
+          description: Surname of the applicant
+          example: Smith
+        dateOfBirth:
+          type: string
+          description: Date of birth of the applicant
+          format: date
+          example: 1990-12-30
+        applicantPostalAddress:
+          $ref: '#/components/schemas/ApplicantPostalAddress'
+        applicantContact:
+          $ref: '#/components/schemas/ApplicantContact'
+        businessApplicant:
+          $ref: '#/components/schemas/BusinessApplicant'
+        jointApplicants:
+          type: array
+          description: Only one joint applicant is supported at the moment.
+          items:
+            $ref: '#/components/schemas/JointApplicant'
+    BusinessApplicant:
+      required:
+      - businessName
+      type: object
+      properties:
+        businessName:
+          type: string
+          description: Trading name
+          example: ABC Motors
+        businessContactPersons:
+          type: array
+          description: There should be atleast one primary business contact person
+            and an optional joint contact person.
+          items:
+            $ref: '#/components/schemas/BusinessContactPerson'
+      description: Business Applicant details
+    BusinessContactPerson:
+      required:
+      - businessContactType
+      - firstName
+      - surname
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: First name of the applicant
+          example: John
+        surname:
+          type: string
+          description: Surname of the applicant
+          example: Smith
+        businessContactType:
+          type: string
+          description: Contact type primary or joint. There can be only one joint
+            applicant.
+          example: Primary
+          enum:
+          - PRIMARY
+          - JOINT
+    JointApplicant:
+      required:
+      - firstName
+      - surname
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: First name of the applicant
+          example: John
+        surname:
+          type: string
+          description: Surname of the applicant
+          example: Smith
+        dateOfBirth:
+          type: string
+          description: Date of birth of joint applicant
+          format: date
+          example: 1990-12-30
+    ApplicantPostalAddress:
+      required:
+      - addressLine1
+      - city
+      - postcode
+      - suburb
+      type: object
+      properties:
+        addressLine1:
+          type: string
+          description: Applicant address line 1
+          example: 105 Leonard Road
+        addressLine2:
+          type: string
+          description: Applicant address line 2
+          example: 105 Leonard Road
+        suburb:
+          type: string
+          description: Applicant address suburb
+          example: 105 Leonard Road
+        city:
+          type: string
+          description: Applicant address city/town
+          example: 105 Leonard Road
+        postcode:
+          type: string
+          description: Applicant address postcode
+          example: "178.0"
+      description: Physical or postal address of the applicant(inluding PO Box address)
+    ApplicantContact:
+      required:
+      - phone
+      type: object
+      properties:
+        phone:
+          type: string
+          description: Landline number
+          example: 9.2863319E7
+        mobileNum:
+          type: string
+          description: mobile phone number
+          example: 2.1222999E7
+        emailAddress:
+          type: string
+          description: email address
+          format: email
+          example: here@there.com
+    ResponseError:
+      required:
+      - category
+      - code
+      - message
+      type: object
+      properties:
+        category:
+          type: string
+          description: Error category
+          example: VALIDATION
+          enum:
+          - VALIDATION
+          - FUNCTIONAL
+          - BUSINESS
+          - SYSTEM
+        code:
+          type: string
+          description: Error code
+          example: ER001
+        message:
+          type: string
+          description: Error message
+          example: Amount is mandatory
+        field:
+          type: string
+          description: Field name
+          example: purchasePrice
+    GapBindResponseDTO:
+      type: object
+      properties:
+        errors:
+          type: array
+          description: List of errors
+          items:
+            $ref: '#/components/schemas/ResponseError'
+  securitySchemes:
+    APIKeyHeader:
+      type: apiKey
+      description: Please enter the Bearer token generated using /auth/v1/token/create
+      name: Authorization
+      in: header
