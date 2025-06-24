@@ -1,0 +1,1009 @@
+openapi: '3.0.0'
+
+info:
+  version: 1.0.0
+  title: Rating Engine API
+  description: Rating Engine API
+
+servers:
+  - url: http://rating-engine:8080
+    description: Rating Engine Service API endpoints
+
+tags:
+  - name: Rating Engine
+    description: Rating Engine Service API
+
+paths:
+
+  /rating/agent/category/premium:
+    #/rating/Premium/GetAgentCategoryPremiums
+    get:
+      tags:
+        - AgentService
+      summary: "Retrieves all available agent modified wholesale and retails premiums for a rate card category. \r\nwhen specified the optional loading code will be applied to the premiums."
+      description: ''
+      operationId: getAgentCategoryPremiums
+      parameters:
+        - name: agentCode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: rateCardCode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: categoryCode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: loadingCode
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryPremiumsDto'
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+
+
+
+ 
+
+components:
+  schemas:
+    ExemptionTransaction:
+      type: object
+      properties:
+        effectiveDate:
+          type: string
+        submittedBy:
+          type: string
+        tierUuid:
+          type: string
+        exemptionApplied:
+          type: boolean
+    SuccessResponse:
+      type: object
+      properties:
+        value:
+          type: string
+          default: "SUCCESS"
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+
+    Product:
+      type: object
+      description: A product such as MBI, PPI, GAP
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        gst:
+          type: number
+        tiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tier'
+
+    Group:
+      type: object
+      description: A group, normally a corporate entity, that receives a consistent level of pricing
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        uuid:
+          type: string
+        product_to_tier:
+          type: object
+          additionalProperties:
+            type: string
+        product_to_margin:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Margin'
+        agents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Agent'
+
+    Agent:
+      type: object
+      description: A single entity, which may be stand-alone, or part of a group. If not part of a group, it is assignable a tier
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        uuid:
+          type: string
+        group_name:
+          type: string
+        product_to_margin:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Margin'
+        product_to_effective_margin:
+          type: object
+          # using string because stub generation does not work with BigDecimal map
+          additionalProperties:
+            type: string
+        group_product_to_tier:
+          type: object
+          additionalProperties:
+            type: string
+        product_to_tier:
+          type: object
+          additionalProperties:
+            type: string
+
+    Margin:
+      type: object
+      properties:
+        uuid:
+          type: string
+        group_uuid:
+          type: string
+        agent_uuid:
+          type: string
+        product_code:
+          type: string
+        margin:
+          type: number
+
+    Tier:
+      type: object
+      description: A level of pricing for a product. Normally tier 1 is a base tier, with further tiers denoting discounts
+      properties:
+        created:
+          type: string
+        name:
+          type: string
+        base_tier:
+          type: boolean
+        mileageExemption:
+          type: boolean
+        status:
+          type: string
+        uuid:
+          type: string
+        product_code:
+          type: string
+        retail_margin:
+          type: number
+        max_retail_margin:
+          type: number
+        agents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Agent'
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/Group'
+        cover_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoverType'
+        rates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Rate'
+
+    Category:
+      type: object
+      description: Category of vehicle (a measure of vehicle quality)
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        visible:
+          type: boolean
+        defaultExcess:
+          type: integer
+        categoryAgentRetailMargin:
+          format: double
+          type: number
+        rateOptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RateOptions'
+
+    CoverType:
+      type: object
+      description: A type of cover, for example ExtremePLUS, SmartCover
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        electricLoadingApplied:
+          type: boolean
+          default: false
+        premiumRounding:
+          type: boolean
+          default: false
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+
+    RateList:
+      type: object
+      description: List of rates
+      properties:
+        effectiveDate:
+          type: string
+          format: date
+        tierUuid:
+          type: string
+        coverTypeCode:
+          type: string
+        comment:
+          type: string
+        submittedBy:
+          type: string
+        actionedBy:
+          type: string
+        rates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Rate'
+        mileageExemptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/MileageExemption'
+
+    RateOptions:
+      type: object
+      properties:
+        uuid:
+          type: string
+        excess:
+          type: integer
+        updated_excess:
+          type: integer
+        max_age:
+          type: integer
+        max_shortfall:
+          type: integer
+        additional_benefit:
+          type: integer
+        updated_max_age:
+          type: integer
+        max_mileage:
+          type: integer
+        updated_max_mileage:
+          type: integer
+        claim_limits:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClaimLimit'
+        rates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Rate'
+        mileageExemptions:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/MileageExemption'
+        ageDispensation:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/AgeDispensationDto'
+        mileageDispensation:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/MileageDispensationDto'
+
+    Rate:
+      type: object
+      description: Denotes a premium for a particular cover product, tier and set of vehicle parameters
+      properties:
+        uuid:
+          type: string
+        term:
+          type: integer
+        term_adjustment:
+          type: integer
+        updated_term:
+          type: integer
+        updated_wholesale_premium:
+          type: number
+        wholesale_premium:
+          type: number
+        updated_wholesale_premium_adjustment:
+          type: number
+        wholesale_premium_adjustment:
+          type: number
+        wholesale_premium_total:
+          type: number
+        retail_premium:
+          type: number
+        retail_premium_adjustment:
+          type: number
+        updated_retail_premium:
+          type: number
+        updated_retail_premium_adjustment:
+          type: number
+        electricLoading:
+          type: number
+        categoryCode:
+          type: string
+        coverTypeCode:
+          type: string
+        base_uuid:
+          type: string
+        hash:
+          type: string
+        status:
+          type: string
+        premiumUpdated:
+          type: boolean
+        excessUpdated:
+          type: boolean
+    MileageExemption:
+      type: object
+      properties:
+        uuid:
+          type: string
+        maxMileage:
+          type: integer
+        maxMileageAdjustment:
+          type: integer
+        maxMileageTotal:
+          type: integer
+        percentage:
+          type: number
+        percentageAdjustment:
+          type: number
+        percentageTotal:
+          type: number
+        base_uuid:
+          type: string
+        updated_percentageAdjustment:
+          type: number
+        updated_maxMileageAdjustment:
+          type: integer
+        updated_maxMileage:
+          type: integer
+        updated_percentage:
+          type: number
+
+
+    TierCover:
+      type: object
+      properties:
+        tierName:
+          type: string
+        coverTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoverType'
+
+    PendingApproval:
+      type: object
+      properties:
+        pendingItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingItem'
+
+    PendingItem:
+      type: object
+      properties:
+        uuid:
+          type: string
+        entityType:
+          type: string
+        isAdmin:
+          type: boolean
+        entityName:
+          type: string
+        currentState:
+          type: string
+        tierId:
+          type: integer
+        tierUuid:
+          type: string
+        newState:
+          type: string
+        effectiveDate:
+          type: string
+          format: date
+        coverTypeCode:
+          type: string
+        status:
+          type: string
+        submittedBy:
+          type: string
+        actionedBy:
+          type: string
+        actionedDate:
+          type: string
+        comment:
+          type: string
+        file_name:
+          type: string
+        file_url:
+          type: string
+        appliedBy:
+          type: string
+        appliedDate:
+          type: string
+        coverType:
+          $ref: '#/components/schemas/CoverType'
+        errors:
+          description: Gets or sets the errors.
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+        statusCode:
+          format: int32
+          type: integer
+    AgentPriceGroup:
+      type: object
+      properties:
+        uuid:
+          type: string
+        name:
+          type: string
+        agents:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportedAgent'
+        closestTier:
+          type: string
+        diffFromClosestTier:
+          type: number
+        percentageDiffFromClosestTier:
+          type: number
+        diffFromBaseTier:
+          type: number
+        agentPrices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Rate'
+
+    ImportedAgent:
+      type: object
+      properties:
+        agentCode:
+          type: string
+        agentName:
+          type: string
+        agentRateCard:
+          type: string
+
+    ImportedAgentsComparison:
+      type: object
+      properties:
+        currentTiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tier'
+        agentGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentPriceGroup'
+
+    ByteArrayFile:
+      type: object
+      properties:
+        file_name:
+          type: string
+        file_content:
+          type: string
+          format: byte
+
+    TierAssignmentRequest:
+      type: object
+      properties:
+        file:
+          $ref: '#/components/schemas/ByteArrayFile'
+        effectiveDate:
+          type: string
+        submittedBy:
+          type: string
+
+    AgentRateCardsDto:
+      type: object
+      properties:
+        rateCards:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentRateCardDto'
+    AgentRateCardDto:
+      type: object
+      properties:
+        objid:
+          format: int32
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        version:
+          format: int32
+          type: integer
+        friendlyName:
+          type: string
+        typeName:
+          type: string
+        rateCardTypeCode:
+          type: string
+        brandName:
+          type: string
+        productName:
+          type: string
+        gst:
+          format: double
+          type: number
+        covers:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentCoverDto'
+        categories:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentCategoryDto'
+    AgentCoverDto:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+    AgentCategoryDto:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+
+    AgentRatesResponseDto:
+      type: object
+      properties:
+        rateCard:
+          $ref: '#/components/schemas/RateCardDto'
+        agent:
+          $ref: '#/components/schemas/AgentDto'
+        categories:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryDto'
+    RateCardDto:
+      type: object
+      properties:
+        objid:
+          format: int32
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        rateCardTypeCode:
+          type: string
+        premiumTypeCode:
+          type: string
+        gst:
+          format: double
+          type: number
+        version:
+          format: int32
+          type: integer
+    AgentDto:
+      type: object
+      properties:
+        objid:
+          format: int32
+          type: integer
+        agentCode:
+          type: string
+        tradingName:
+          type: string
+    CategoryDto:
+      type: object
+      properties:
+        objid:
+          format: int32
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+        covers:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/CoverDto'
+    CoverDto:
+      type: object
+      properties:
+        objid:
+          format: int32
+          type: integer
+        name:
+          type: string
+        rateCardExcesses:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/RateCardExcessDto'
+    RateCardExcessDto:
+      type: object
+      properties:
+        objid:
+          format: int32
+          type: integer
+        premiums:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentPremiumDto'
+        agentRetailFactor:
+          format: double
+          type: number
+        standardRetailFactor:
+          format: double
+          type: number
+        maxmileage:
+          format: int32
+          type: integer
+        maxage:
+          format: int32
+          type: integer
+        excess:
+          format: double
+          type: number
+        coverClaimLimit:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentCoverClaimLimitDto'
+    AgentPremiumDto:
+      type: object
+      properties:
+        objid:
+          format: int32
+          type: integer
+        term:
+          format: int32
+          type: integer
+        standardWholesalePremium:
+          format: double
+          type: number
+        agentWholesalePremiumModification:
+          format: double
+          type: number
+        agentRetailMargin:
+          format: double
+          type: number
+    AgentCoverClaimLimitDto:
+      type: object
+      properties:
+        objid:
+          format: int32
+          type: integer
+        minmileage:
+          format: int32
+          type: integer
+        maxmileage:
+          format: int32
+          type: integer
+        claimlimit:
+          type: string
+    PutAgentRatesRequestDto:
+      required:
+        - excesses
+        - premiums
+      type: object
+      properties:
+        agentID:
+          format: int32
+          type: integer
+        excesses:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/PutExcessDto'
+        premiums:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/PutPremiumDto'
+
+    PutExcessDto:
+      type: object
+      properties:
+        objid:
+          format: int32
+          type: integer
+        agentRetailFactor:
+          format: double
+          type: number
+
+    PutPremiumDto:
+      type: object
+      properties:
+        objid:
+          format: int32
+          type: integer
+        agentWholesalePremiumModification:
+          format: double
+          type: number
+        agentRetailMargin:
+          format: double
+          type: number
+
+    ApiBadResponse:
+      type: object
+      properties:
+        errors:
+          description: Gets or sets the errors.
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+        statusCode:
+          format: int32
+          type: integer
+
+    CategoryPremiumsDto:
+      type: object
+      properties:
+        gst:
+          format: double
+          type: number
+        covers:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/PremiumCoverDto'
+
+    PremiumCoverDto:
+      type: object
+      properties:
+        objid:
+          format: int32
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        mainBenefit:
+          format: double
+          type: number
+        additionalBenefit:
+          format: double
+          type: number
+        premiumRounding:
+          type: boolean
+          default: false
+        rateCardExcess:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/PremiumRateCardExcessDto'
+
+    PremiumRateCardExcessDto:
+      type: object
+      properties:
+        objid:
+          format: int32
+          type: integer
+        excess:
+          format: int32
+          type: integer
+        maxmileage:
+          format: int32
+          type: integer
+        maxage:
+          format: int32
+          type: integer
+        isDefault:
+          type: boolean
+        premium:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/PremiumDto'
+        coverClaimLimit:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/CoverClaimLimitDto'
+        ageDispensation:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/AgeDispensationDto'
+        mileageDispensation:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/MileageDispensationDto'
+        mileageExemption:
+          uniqueItems: false
+          type: array
+          items:
+            $ref: '#/components/schemas/MileageExemptionDto'
+
+    MileageExemptionDto:
+      type: object
+      properties:
+        maxMileage:
+          type: integer
+        percentage:
+          type: number
+
+    PremiumDto:
+      type: object
+      properties:
+        objid:
+          format: int32
+          type: integer
+        term:
+          format: int32
+          type: integer
+        agentWholesalePremiumEx:
+          format: double
+          type: number
+        agentRetailPremiumEx:
+          format: double
+          type: number
+
+
+    CoverClaimLimitDto:
+      type: object
+      properties:
+        objid:
+          format: int32
+          type: integer
+        minmileage:
+          format: int32
+          type: integer
+        maxmileage:
+          format: int32
+          type: integer
+        claimlimit:
+          type: string
+
+    AgeDispensationDto:
+      type: object
+      properties:
+        minMonth:
+          format: int32
+          type: integer
+        maxMonth:
+          format: int32
+          type: integer
+        loadingAmount:
+          format: double
+          type: number
+        dispensationStatus:
+          format: int32
+          type: integer
+
+    MileageDispensationDto:
+      type: object
+      properties:
+        minMileage:
+          format: int32
+          type: integer
+        maxMileage:
+          format: int32
+          type: integer
+        loadingAmount:
+          format: double
+          type: number
+        dispensationStatus:
+          format: int32
+          type: integer
+
+    ClaimLimit:
+      type: object
+      properties:
+        objid:
+          type: integer
+        min_mileage:
+          type: integer
+        max_mileage:
+          type: integer
+        claim_limit:
+          type: string
+    AgentMargin:
+      type: object
+      properties:
+        agentCode:
+          type: string
+        retailMargin:
+          type: number
+        productCode:
+          type: string
+    AgentGroupMargin:
+      type: object
+      properties:
+        agentGroupCode:
+          type: string
+        retailMargin:
+          type: number
+        productCode:
+          type: string
+    TierMargin:
+      type: object
+      properties:
+        tierUuid:
+          type: string
+        retailMargin:
+          type: number
+        maxRetailMargin:
+          type: number
+    AgentSearchList:
+      type: object
+      properties:
+        agents:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              name:
+                type: string
+              product:
+                type: string
+              uuid:
+                type: string
+              tierName:
+                type: string
+              tierUuid:
+                type: string
+    RatingByteArrayFile:
+      type: object
+      properties:
+        file_name:
+          type: string
+        file_content:
+          type: string
+          format: byte
+        rateList:
+          $ref: '#/components/schemas/RateList'

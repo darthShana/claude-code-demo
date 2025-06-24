@@ -122,8 +122,14 @@ class Applicant(BaseModel):
     dateOfBirth: date
     applicantPostalAddress: ApplicantPostalAddress
     applicantContact: ApplicantContact
-    businessApplicant: BusinessApplicant
+    businessApplicant: Optional[BusinessApplicant] = None
     jointApplicants: List[JointApplicant] = []
+    
+    def model_post_init(self, __context):
+        # If businessApplicant is provided, this is a business application
+        # Individual fields (firstName, surName, dateOfBirth) are always required
+        # but when businessApplicant is present, they represent the primary contact person
+        pass
 
 
 class Finance(BaseModel):
