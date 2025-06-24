@@ -4,6 +4,8 @@ from fastapi.responses import JSONResponse
 from typing import Annotated
 import random
 import string
+import httpx
+import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 
@@ -70,26 +72,84 @@ def get_vehicle_details_mock(rego_or_vin: str) -> VehicleDetails:
     )
 
 
-def calculate_gap_premium(max_shortfall: str) -> GapPremium:
-    """Mock function to calculate GAP premium based on shortfall amount"""
-    base_wholesale = 180.55
-    base_retail = 361.10
+async def calculate_gap_premium(max_shortfall: str, agent_code: str) -> GapPremium:
+    """Calculate GAP premium by calling external rating API"""
+    rating_api_url = os.getenv("RATING_API_URL", "http://localhost:8088")
     
-    multiplier_map = {
-        "GAP_5000": 1.0,
-        "GAP_10000": 1.5,
-        "GAP_15000": 2.0,
-        "GAP_20000": 2.5,
-        "GAP_30000": 3.0,
-        "GAP_40000": 3.5
+    # Map GAP shortfall to category codes
+    shortfall_to_category = {
+        "GAP_5000": "GAP5000",
+        "GAP_10000": "GAP10000",
+        "GAP_15000": "GAP15000",
+        "GAP_20000": "GAP20000",
+        "GAP_30000": "GAP30000",
+        "GAP_40000": "GAP40000"
     }
     
-    multiplier = multiplier_map.get(max_shortfall, 1.0)
+    category_code = shortfall_to_category.get(max_shortfall, "GAP5")
     
-    return GapPremium(
-        wholesaleAmount=base_wholesale * multiplier,
-        retailAmount=base_retail * multiplier
-    )
+    params = {
+        "agentCode": "499",
+        "rateCardCode": "GAP",  # Default rate card
+        "categoryCode": "GC1"
+    }
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{rating_api_url}/rating/agent/category/premium",
+                params=params,
+                timeout=10.0
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            # Find the matching cover based on shortfall amount
+            target_cover_code = shortfall_to_category.get(max_shortfall)
+            if not target_cover_code:
+                raise ValueError(f"Unknown shortfall amount: {max_shortfall}")
+            
+            if not data.get("covers") or len(data["covers"]) == 0:
+                raise ValueError("No covers found in rating API response")
+            print(target_cover_code)
+
+            # Search through covers to find the matching one
+            matching_cover = None
+            for cover in data["covers"]:
+                if cover.get("code", "").lower() == target_cover_code.lower():
+                    matching_cover = cover
+                    break
+            
+            if not matching_cover:
+                raise ValueError(f"Cover with code '{target_cover_code}' not found in rating API response")
+            
+            # Extract premium from the matching cover
+            if (matching_cover.get("rateCardExcess") and
+                len(matching_cover["rateCardExcess"]) > 0 and
+                matching_cover["rateCardExcess"][0].get("premium") and
+                len(matching_cover["rateCardExcess"][0]["premium"]) > 0):
+                
+                premium_data = matching_cover["rateCardExcess"][0]["premium"][0]
+                retail_premium = premium_data.get("agentRetailPremiumEx")
+                wholesale_premium = premium_data.get("agentWholesalePremiumEx")
+                
+                if retail_premium is None or wholesale_premium is None:
+                    raise ValueError("Premium data not found in rating API response")
+                
+                return GapPremium(
+                    wholesaleAmount=wholesale_premium,
+                    retailAmount=retail_premium
+                )
+            else:
+                # Return error if structure is unexpected
+                raise ValueError(f"Invalid premium structure for cover '{target_cover_code}'")
+                
+    except (httpx.RequestError, httpx.HTTPStatusError, ValueError) as e:
+        # Fallback to mock calculation if API call fails
+        print(f"Rating API call failed: {e}, using fallback calculation")
+
+        raise e
 
 
 @app.post("/quickquote/generator/gap/v2/quote/create", response_model=GapQuoteResponseDTO)
@@ -117,7 +177,7 @@ async def create_quote(
         vehicle_details = get_vehicle_details_mock(quote_request.regoOrVin)
         
         # Calculate premium
-        gap_premium = calculate_gap_premium(quote_request.maxShortfall)
+        gap_premium = await calculate_gap_premium(quote_request.maxShortfall.value, x_agent_code)
         
         # Generate quote reference
         quote_ref = generate_quote_ref()
